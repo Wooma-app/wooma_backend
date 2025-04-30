@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "module": "NodeNext",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "nodenext",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "outDir": "lib",
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2017",
+    "useUnknownInCatchVariables": false,
+    "skipLibCheck": true
+
+  },
+  "compileOnSave": true,
+  "include": [
+    "src",
+    "__mocks__/**/*",
+    "__tests__/**/*",
+    "jest.config.js"
+  ]
+}

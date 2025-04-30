@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "wooma-488f1",
+    "staging": "wooma-488f1"
+  },
+  "targets": {},
+  "etags": {}
+}
