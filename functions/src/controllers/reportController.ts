@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import {paymentSuccess} from "../services/reportService";
 import {db} from "../config/firebase";
 import {REVENUECAT_API_KEY} from "../config/constant";
-import {Report} from "../interfaces";
+import {Report, User} from "../interfaces";
 
 // Handler for Generating PDF and Report Finalising
 export const onGeneratePDFHandler = async (req: Request, res: Response) => {
@@ -68,13 +68,13 @@ export const onProcessPayment = async (req: Request, res: Response) => {
       purchase_date: activeEntitlement.purchase_date,
       expires_date: activeEntitlement.expires_date ?? null,
       is_trial_period: activeEntitlement.is_trial_period ?? false,
-      created_at: new Date(),
+      created_at: new Date().toString(),
     });
 
     // Unlock the report
     await db.collection("reports").doc(reportId).update({
       isLocked: false,
-      updatedAt: new Date(),
+      updatedAt: new Date().toString(),
     });
 
     res.status(200).send("Report unlocked and payment saved");
@@ -161,9 +161,91 @@ export const onGetReportListHandler = async (req: Request, res: Response) => {
       };
     }));
 
+    // Sort the reports by the updatedAt value
+    reports.sort((a: any, b: any) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+
     res.json({
       unfinished,
       reports,
+    });
+  } catch (err) {
+    res.json({
+      message: "something went wrong",
+    });
+  }
+};
+
+// Handler for getting report lists for admin panel.
+export const onGetAdminReportListHandler = async (req: Request, res: Response) => {
+  const {status, paymentStatus} = req.query;
+
+  try {
+    let reportRef = db.collection("reports") as FirebaseFirestore.Query<FirebaseFirestore.DocumentData>;
+    if (status !== "") {
+      reportRef = reportRef.where("status", "==", status);
+    }
+    if (paymentStatus !== "") {
+      reportRef = reportRef.where("paymentStatus", "==", paymentStatus);
+    }
+    const querySnapshot = await reportRef.get();
+
+    const reports = await Promise.all(querySnapshot.docs.map(async (doc) => {
+      const data = doc.data() as Report;
+
+      const userDoc = await db.collection("users").doc(data.userId).get();
+      const user = userDoc.data() as User;
+
+      return {
+        ...data,
+        reportId: doc.id,
+        phoneNumber: user?.phoneNumber,
+      };
+    }));
+
+    // Sort the reports by the updatedAt value
+    reports.sort((a: any, b: any) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+
+    res.json({reports});
+  } catch (err) {
+    console.log(err);
+    res.json({
+      message: "something went wrong",
+    });
+  }
+};
+
+// Handler for getting user lists for admin panel.
+export const onGetAdminUserListHandler = async (req: Request, res: Response) => {
+  const {userId} = req.query;
+
+  try {
+    const userRef = db.collection("users");
+
+    const querySnapshot = await userRef.get();
+
+    const users = await Promise.all(querySnapshot.docs.map(async (doc) => {
+      const data = doc.data() as User;
+
+      const reportsDoc = await db.collection("reports").where("userId", "==", userId).get();
+      const reportsCreated = reportsDoc.docs.length;
+      let reportsPaid = 0;
+      reportsDoc.docs.map(async (doc) => {
+        const data = doc.data() as Report;
+        if (data.paymentStatus === "paid") {
+          reportsPaid ++;
+        }
+      });
+
+      return {
+        reportId: doc.id,
+        reportsCreated,
+        reportsPaid,
+        ...data,
+      };
+    }));
+
+    res.json({
+      users,
     });
   } catch (err) {
     res.json({

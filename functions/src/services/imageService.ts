@@ -15,7 +15,7 @@ export const saveSpaceMetadata = async (
     name: spaceName,
     reportId,
     issues,
-    createdAt: new Date(),
+    createdAt: new Date().toString(),
   });
 
   return spaceRef.id;
@@ -24,21 +24,21 @@ export const saveSpaceMetadata = async (
 export const saveImageMetadata = async (
   reportId: string,
   spaceId: string,
-  imageId: string,
-  imageFilename: string,
-  imageType: string,
-  imageIssue: string
+  image: any,
 ) => {
-  const localImageRef = db.collection(`reports/${reportId}/local_images`).doc(imageId);
+  const {id, filename, type, localIdentifier, issue} = image;
+  console.log("----img", image);
+  const localImageRef = db.collection(`reports/${reportId}/local_images`).doc(id);
   await localImageRef.set({
     spaceId,
     uploadStatus: "pending",
     storagePath: "",
     hash: "",
-    filename: imageFilename,
-    type: imageType,
-    issue: imageIssue || "",
-    createdAt: new Date(),
+    filename,
+    type,
+    localIdentifier,
+    issue: issue || "",
+    createdAt: new Date().toString(),
   });
 };
 
@@ -121,7 +121,7 @@ export const uploadImage = async (
         uploadStatus: "complete",
         storagePath: downloadUrl[0],
         hash: imageHash, // Save hash to detect duplicates later
-        uploadedAt: new Date(),
+        uploadedAt: new Date().toString(),
       });
 
     console.log("Image uploaded and compressed successfully");

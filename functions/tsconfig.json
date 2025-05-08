@@ -11,8 +11,8 @@
     "strict": true,
     "target": "es2017",
     "useUnknownInCatchVariables": false,
-    "skipLibCheck": true
-
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
   },
   "compileOnSave": true,
   "include": [

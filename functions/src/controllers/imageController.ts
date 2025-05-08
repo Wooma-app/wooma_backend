@@ -14,7 +14,7 @@ export const onCreateReportHandler = async (req: Request, res: Response) => {
     const propertyRef = db.collection("properties").doc();
     await propertyRef.set({
       addressLine1, city, state, postCode,
-      createdAt: new Date(),
+      createdAt: new Date().toString(),
       createdBy: userId,
     });
 
@@ -26,8 +26,8 @@ export const onCreateReportHandler = async (req: Request, res: Response) => {
       isLocked: false,
       paymentStatus: "unpaid",
       spaceCompleted: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toString(),
+      updatedAt: new Date().toString(),
     };
 
     const reportRef = db.collection("reports").doc();
@@ -46,15 +46,17 @@ export const onBeforeImageUploadHandler = async (req: Request, res: Response) =>
 
   try {
     spaceData.map(async (space: any) => {
+      console.log("---space", space);
       const spaceId = await saveSpaceMetadata(reportId, space.name, space.issues);
       const images = imageData[space.name];
 
       images.map(async (image: any) => {
-        await saveImageMetadata(reportId, spaceId, image.id, image.filename, image.type, "");
+        await saveImageMetadata(reportId, spaceId, image);
       });
 
       const reportRef = db.collection("reports").doc(reportId);
       const reportDoc = await reportRef.get();
+      console.log("---report exist", reportDoc.exists);
       if (!reportDoc.exists) {
         console.log("No such document!");
         return;
@@ -102,7 +104,8 @@ export const onImageUploadHandler = async (req: Request, res: Response) => {
   await Promise.all(
     imageMeta.docs.map(async (doc) => {
       const data = doc.data();
-      const image = images.find((img) => data.filename === img.originalname);
+      const image = images.find((img) => data.filename.toLowerCase() === img.originalname.toLowerCase());
+
       if (!image || data.uploadStatus === "complete") return;
 
       try {
@@ -114,10 +117,11 @@ export const onImageUploadHandler = async (req: Request, res: Response) => {
     })
   );
 
-  // if (uploadedCount === imageMeta.docs.length) {
-  await updateReportStatus(reportId, "completed");
-  // } else await updateReportStatus(reportId, "draft");
-  const pdfStoragePath = processPDF(reportId, report.userId);
+  let pdfStoragePath = "";
+  if (uploadedCount === imageMeta.docs.length) {
+    await updateReportStatus(reportId, "completed");
+    pdfStoragePath = await processPDF(reportId, report.userId);
+  } else await updateReportStatus(reportId, "failed");
 
   res.status(200).json({
     message: uploadedCount > 0 ?
@@ -126,3 +130,4 @@ export const onImageUploadHandler = async (req: Request, res: Response) => {
     pdfStoragePath,
   });
 };
+

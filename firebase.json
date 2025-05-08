@@ -13,7 +13,9 @@
       "predeploy": [
         "npm --prefix \"$RESOURCE_DIR\" run lint",
         "npm --prefix \"$RESOURCE_DIR\" run build"
-      ]
+      ],
+      "memory": "1GB",
+      "timeoutSeconds": 60
     }
   ],
   "firestore": {

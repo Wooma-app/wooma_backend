@@ -28,8 +28,8 @@ export interface Property {
 export interface User {
     phoneNumber: string;
     uid: string; // token
-    firstName: string;
-    lastName: string;
+    // firstName: string;
+    // lastName: string;
     createdAt: Date;
 }
 
