@@ -27,7 +27,6 @@ export const saveImageMetadata = async (
   image: any,
 ) => {
   const {id, filename, type, localIdentifier, issue} = image;
-  console.log("----img", image);
   const localImageRef = db.collection(`reports/${reportId}/local_images`).doc(id);
   await localImageRef.set({
     spaceId,

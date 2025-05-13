@@ -46,7 +46,6 @@ export const onBeforeImageUploadHandler = async (req: Request, res: Response) =>
 
   try {
     spaceData.map(async (space: any) => {
-      console.log("---space", space);
       const spaceId = await saveSpaceMetadata(reportId, space.name, space.issues);
       const images = imageData[space.name];
 
@@ -56,7 +55,6 @@ export const onBeforeImageUploadHandler = async (req: Request, res: Response) =>
 
       const reportRef = db.collection("reports").doc(reportId);
       const reportDoc = await reportRef.get();
-      console.log("---report exist", reportDoc.exists);
       if (!reportDoc.exists) {
         console.log("No such document!");
         return;

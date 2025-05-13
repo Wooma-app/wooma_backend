@@ -1,5 +1,5 @@
 import {Request, Response} from "express";
-import {onUserSignup} from "../services/authService";
+import {onUserSignin, onUserSignup} from "../services/authService";
 
 export const verifyOtpHandler = async (req: Request, res: Response) => {
   try {
@@ -28,6 +28,16 @@ export const onUserSignupHandler = async (req: Request, res: Response) => {
   try {
     const {uid, phoneNumber} = req.body;
     await onUserSignup(uid, phoneNumber);
+    res.json({message: "User created successfully"});
+  } catch (error) {
+    res.status(500).json({error: error.message});
+  }
+};
+
+export const onUserSigninHandler = async (req: Request, res: Response) => {
+  try {
+    const {uid} = req.body;
+    await onUserSignin(uid);
     res.json({message: "User created successfully"});
   } catch (error) {
     res.status(500).json({error: error.message});

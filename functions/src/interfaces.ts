@@ -28,9 +28,11 @@ export interface Property {
 export interface User {
     phoneNumber: string;
     uid: string; // token
+    createdAt: Date;
+    lastLogin: Date;
+
     // firstName: string;
     // lastName: string;
-    createdAt: Date;
 }
 
 export interface Space {

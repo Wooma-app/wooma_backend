@@ -2,7 +2,7 @@ import {Request, Response} from "express";
 import {paymentSuccess} from "../services/reportService";
 import {db} from "../config/firebase";
 import {REVENUECAT_API_KEY} from "../config/constant";
-import {Report, User} from "../interfaces";
+import {Image, Report, Space, User} from "../interfaces";
 
 // Handler for Generating PDF and Report Finalising
 export const onGeneratePDFHandler = async (req: Request, res: Response) => {
@@ -154,10 +154,51 @@ export const onGetReportListHandler = async (req: Request, res: Response) => {
       const len = spaceLength === undefined || spaceLength === 0 ? 1 : spaceLength;
       const draftPercent = data.status === "draft" ?
         {draftPercent: (data.spaceCompleted*1.0 / len) * 100} : {};
+
+      const spaceMap: Record<string, string> = {};
+      const snapshot = await db.collection("spaces").where("reportId", "==", doc.id).get();
+      const spaceData = snapshot.docs.map((doc) => {
+        const data = doc.data() as Space;
+        spaceMap[doc.id] = data.name;
+
+        return {
+          name: data.name,
+          issues: data.issues,
+        };
+      });
+
+      const imageData: Record<string, any[]> = {};
+
+      const imageSnapshot = await reportRef.doc(doc.id).collection("local_images").get();
+      imageSnapshot.docs.forEach((doc) => {
+        const image = doc.data() as Image;
+        const spaceName = spaceMap[image.spaceId];
+
+        if (!spaceName) return; // Skip if spaceId is not found
+
+        const formattedImage = {
+          id: doc.id,
+          filename: image.filename,
+          type: image.type,
+          issue: image.issue || "",
+          localIdentifier: "",
+          storagePath: image.storagePath || "",
+          createdAt: image.createdAt || "",
+        };
+
+        if (!imageData[spaceName]) {
+          imageData[spaceName] = [];
+        }
+
+        imageData[spaceName].push(formattedImage);
+      });
+
       return {
         reportId: doc.id,
         ...draftPercent,
         ...data,
+        spaceData,
+        imageData,
       };
     }));
 
@@ -189,9 +230,13 @@ export const onGetAdminReportListHandler = async (req: Request, res: Response) =
     }
     const querySnapshot = await reportRef.get();
 
+    let paidReportsCnt = 0;
     const reports = await Promise.all(querySnapshot.docs.map(async (doc) => {
       const data = doc.data() as Report;
 
+      if (data.paymentStatus === "paid") {
+        paidReportsCnt ++;
+      }
       const userDoc = await db.collection("users").doc(data.userId).get();
       const user = userDoc.data() as User;
 
@@ -205,7 +250,7 @@ export const onGetAdminReportListHandler = async (req: Request, res: Response) =
     // Sort the reports by the updatedAt value
     reports.sort((a: any, b: any) => new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
 
-    res.json({reports});
+    res.json({reports, paidReportsCnt});
   } catch (err) {
     console.log(err);
     res.json({
@@ -217,6 +262,7 @@ export const onGetAdminReportListHandler = async (req: Request, res: Response) =
 // Handler for getting user lists for admin panel.
 export const onGetAdminUserListHandler = async (req: Request, res: Response) => {
   const {userId} = req.query;
+  console.log(userId, req.query);
 
   try {
     const userRef = db.collection("users");
@@ -225,8 +271,11 @@ export const onGetAdminUserListHandler = async (req: Request, res: Response) => 
 
     const users = await Promise.all(querySnapshot.docs.map(async (doc) => {
       const data = doc.data() as User;
+      if (doc.id !== userId && userId !== "") {
+        return null;
+      }
 
-      const reportsDoc = await db.collection("reports").where("userId", "==", userId).get();
+      const reportsDoc = await db.collection("reports").where("userId", "==", doc.id).get();
       const reportsCreated = reportsDoc.docs.length;
       let reportsPaid = 0;
       reportsDoc.docs.map(async (doc) => {
@@ -244,9 +293,9 @@ export const onGetAdminUserListHandler = async (req: Request, res: Response) => 
       };
     }));
 
-    res.json({
-      users,
-    });
+    const filteredUsers = users.filter((user) => user !== null);
+
+    res.json({users: filteredUsers});
   } catch (err) {
     res.json({
       message: "something went wrong",

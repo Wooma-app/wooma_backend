@@ -1,5 +1,5 @@
 /* eslint-disable linebreak-style */
-import {auth, db, firestore} from "../config/firebase";
+import {auth, db} from "../config/firebase";
 
 export const verifyOtp = async (phoneNumber: string) => {
   const user = await auth.getUserByPhoneNumber(phoneNumber);
@@ -17,6 +17,14 @@ export const onUserSignup = async (uid: string, phoneNumber: string) => {
   await userRef.set({
     uid,
     phoneNumber,
-    createdAt: firestore.FieldValue.serverTimestamp(),
+    createdAt: new Date().toString(),
+    lastLogin: new Date().toString(),
+  });
+};
+
+export const onUserSignin = async (uid: string) => {
+  const userRef = db.collection("users").doc(uid);
+  await userRef.update({
+    lastLogin: new Date().toString(),
   });
 };
